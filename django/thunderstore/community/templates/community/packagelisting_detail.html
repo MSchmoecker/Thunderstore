@@ -141,7 +141,7 @@ window.ts.PackageManagementPanel(
                 <td>Categories</td>
                 <td>
                     {% for category in object.categories.all %}
-                        <a href="{% community_url "packages.list" %}?included_categories={{ category.pk }}"><span class="badge badge-pill badge-secondary">{{ category.name }}</span></a>
+                        <a href="{% community_url "packages.list" %}?included_categories={{ category.pk }}"><span class="badge badge-pill badge-secondary" title="{{ category.description }}">{{ category.name }}</span></a>
                     {% endfor %}
                 </td>
             </tr>

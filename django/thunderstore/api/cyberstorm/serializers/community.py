@@ -44,6 +44,9 @@ class CyberstormPackageCategorySerializer(serializers.Serializer):
     id = serializers.CharField()  # noqa: A003
     name = serializers.CharField()
     slug = serializers.SlugField()
+    description = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True
+    )
 
 
 class CyberstormPackageListingSectionSerializer(serializers.Serializer):

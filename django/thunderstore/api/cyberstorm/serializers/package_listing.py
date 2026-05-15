@@ -9,6 +9,9 @@ from thunderstore.repository.api.experimental.serializers import (
 class PackageListingCategorySerializer(serializers.Serializer):
     name = serializers.CharField()
     slug = serializers.SlugField()
+    description = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True
+    )
 
 
 class PackageListingCategoriesSerializer(serializers.Serializer):

@@ -30,6 +30,7 @@ class PackageCategoryFactory(DjangoModelFactory):
     community = factory.SubFactory(CommunityFactory)
     name = factory.Sequence(lambda n: f"TestCategory{n}")
     slug = factory.Sequence(lambda n: f"test-category-{n}")
+    description = factory.Sequence(lambda n: f"Test description {n}")
 
 
 class CommunitySiteFactory(DjangoModelFactory):

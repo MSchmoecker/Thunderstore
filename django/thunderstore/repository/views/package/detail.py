@@ -147,7 +147,7 @@ class PackageDetailView(PackageListingDetailView):
         context["show_internal_notes"] = self.permissions_checker.can_moderate
 
         def format_category(cat: PackageCategory):
-            return {"name": cat.name, "slug": cat.slug}
+            return {"name": cat.name, "slug": cat.slug, "description": cat.description}
 
         context["management_panel_props"] = {
             "isDeprecated": package_listing.package.is_deprecated,

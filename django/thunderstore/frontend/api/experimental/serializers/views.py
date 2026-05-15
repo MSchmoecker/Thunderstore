@@ -39,7 +39,7 @@ class CommunityCardSerializer(serializers.Serializer):
 class PackageCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = PackageCategory
-        fields = ["name", "slug"]
+        fields = ["name", "slug", "description"]
 
 
 class PackageVersionSerializer(serializers.Serializer):

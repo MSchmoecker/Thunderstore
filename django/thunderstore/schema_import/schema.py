@@ -11,6 +11,7 @@ class SchemaThunderstoreSection(BaseModel):
 
 class SchemaThunderstoreCategory(BaseModel):
     label: str
+    description: Optional[str] = None
 
 
 class SchemaCommunity(BaseModel):

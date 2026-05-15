@@ -180,7 +180,7 @@
             </div>
             <div class="category-badge-container bg-light px-2 pt-2 flex-grow-1 d-flex flex-row flex-wrap align-items-end align-content-end ">
                 {% for category in object.categories.all %}
-                    <a href="{% community_url "packages.list" %}?included_categories={{ category.pk }}"><span class="badge badge-pill badge-secondary category-badge">{{ category.name }}</span></a>
+                    <a href="{% community_url "packages.list" %}?included_categories={{ category.pk }}"><span class="badge badge-pill badge-secondary category-badge" title="{{ category.description }}">{{ category.name }}</span></a>
                 {% endfor %}
             </div>
             <div class="bg-light p-2">

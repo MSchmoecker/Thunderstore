@@ -11,6 +11,7 @@ class PackageCategoryAdmin(admin.ModelAdmin):
         "id",
         "name",
         "slug",
+        "description",
         "datetime_created",
         "datetime_updated",
         "community",
@@ -23,6 +24,7 @@ class PackageCategoryAdmin(admin.ModelAdmin):
     search_fields = (
         "name",
         "slug",
+        "description",
     )
     readonly_fields = (
         "datetime_created",

@@ -25,6 +25,9 @@ class PackageListingUpdateRequestSerializer(serializers.Serializer):
 class PackageCategoryExperimentalSerializer(serializers.Serializer):
     name = serializers.CharField()
     slug = serializers.SlugField()
+    description = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True
+    )
 
 
 class PackageListingUpdateResponseSerializer(serializers.Serializer):

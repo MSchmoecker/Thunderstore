@@ -69,7 +69,11 @@ def test_api_experimental_package_listing_update(
 
     assert response.status_code == 200
     assert response.json()["categories"] == [
-        {"name": package_category.name, "slug": package_category.slug}
+        {
+            "name": package_category.name,
+            "slug": package_category.slug,
+            "description": package_category.description,
+        }
     ]
     assert active_package_listing.categories.count() == 1
     assert package_category in active_package_listing.categories.all()
