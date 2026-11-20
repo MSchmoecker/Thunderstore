@@ -319,3 +319,156 @@ def test_public_version_endpoints__rejected_version_is_hidden(
     response = api_client.get(url)
 
     assert response.status_code == expected_status
+
+
+# ---------------------------------------------------------------------------
+# Packages whose every version is rejected: hidden from the public, but
+# moderators must still be able to view and act on them.
+# ---------------------------------------------------------------------------
+
+
+def _create_rejected_only_listing() -> PackageListing:
+    listing = PackageListingFactory(
+        review_status=PackageListingReviewStatus.approved,
+        package_version_kwargs={
+            "version_number": BASE_VERSION,
+            "review_status": PackageVersionReviewStatus.approved,
+        },
+    )
+    listing.package.versions.get().reject(agent=None, is_system=True)
+    listing.package.refresh_from_db()
+    assert listing.package.latest is None
+    return listing
+
+
+def _listing_url(listing: PackageListing) -> str:
+    return (
+        f"/api/cyberstorm/listing/{listing.community.identifier}/"
+        f"{listing.package.namespace.name}/{listing.package.name}/"
+    )
+
+
+MODERATOR_VISIBILITY_CASES = (
+    ("anonymous", False),
+    ("regular_user", False),
+    (CommunityMemberRole.janitor, False),
+    (CommunityMemberRole.moderator, True),
+    ("team_member", True),
+    ("superuser", True),
+)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("path", ("", f"v/{BASE_VERSION}/"))
+@pytest.mark.parametrize(("viewer", "can_view"), MODERATOR_VISIBILITY_CASES)
+def test_rejected_only_listing__detail_requires_manage_permission(
+    api_client: APIClient,
+    path: str,
+    viewer: str,
+    can_view: bool,
+) -> None:
+    listing = _create_rejected_only_listing()
+    user = _create_viewer(viewer, listing)
+    if user is not None:
+        api_client.force_authenticate(user)
+
+    response = api_client.get(_listing_url(listing) + path)
+
+    if can_view:
+        assert response.status_code == 200
+        data = response.json()
+        assert data["full_version_name"].endswith(BASE_VERSION)
+        assert data["version_is_rejected"] is True
+        assert data["version_count"] == 1
+        assert data["latest_version_number"] is None
+    else:
+        assert response.status_code == 404
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(("viewer", "can_view"), MODERATOR_VISIBILITY_CASES)
+def test_rejected_only_listing__version_list_requires_manage_permission(
+    api_client: APIClient,
+    viewer: str,
+    can_view: bool,
+) -> None:
+    listing = _create_rejected_only_listing()
+    user = _create_viewer(viewer, listing)
+    if user is not None:
+        api_client.force_authenticate(user)
+
+    response = api_client.get(_package_url(listing) + "versions/")
+
+    if can_view:
+        assert response.status_code == 200
+        assert [v["version_number"] for v in response.json()] == [BASE_VERSION]
+    else:
+        assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_rejected_only_listing__moderator_can_reject_listing(
+    api_client: APIClient,
+) -> None:
+    listing = _create_rejected_only_listing()
+    api_client.force_authenticate(
+        _create_viewer(CommunityMemberRole.moderator, listing)
+    )
+
+    response = api_client.post(
+        _listing_url(listing) + "reject/",
+        {"rejection_reason": "Malware"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    listing.refresh_from_db()
+    assert listing.review_status == PackageListingReviewStatus.rejected
+
+
+@pytest.mark.django_db
+def test_rejected_only_listing__team_owner_can_view_status(
+    api_client: APIClient,
+) -> None:
+    listing = _create_rejected_only_listing()
+    api_client.force_authenticate(_create_viewer("team_owner", listing))
+
+    response = api_client.get(_listing_url(listing) + "status/")
+
+    assert response.status_code == 200
+    assert response.json()["review_status"] == PackageListingReviewStatus.approved
+
+
+@pytest.mark.django_db
+def test_rejected_only_package__team_owner_can_deprecate(
+    api_client: APIClient,
+) -> None:
+    listing = _create_rejected_only_listing()
+    api_client.force_authenticate(_create_viewer("team_owner", listing))
+
+    response = api_client.post(
+        _package_url(listing) + "deprecate/",
+        {"deprecate": True},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    listing.package.refresh_from_db()
+    assert listing.package.is_deprecated is True
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("viewer", (CommunityMemberRole.moderator, "team_owner"))
+def test_rejected_only_listing__permissions_are_available(
+    api_client: APIClient,
+    viewer: str,
+) -> None:
+    listing = _create_rejected_only_listing()
+    api_client.force_authenticate(_create_viewer(viewer, listing))
+
+    response = api_client.get(
+        f"/api/cyberstorm/package/{listing.community.identifier}/"
+        f"{listing.package.namespace.name}/{listing.package.name}/permissions/"
+    )
+
+    assert response.status_code == 200
