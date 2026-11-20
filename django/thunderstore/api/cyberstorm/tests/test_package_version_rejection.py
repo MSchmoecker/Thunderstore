@@ -472,3 +472,79 @@ def test_rejected_only_listing__permissions_are_available(
     )
 
     assert response.status_code == 200
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("action", "initial_status", "expected_status"),
+    (
+        (
+            "reject",
+            PackageVersionReviewStatus.approved,
+            PackageVersionReviewStatus.rejected,
+        ),
+        (
+            "approve",
+            PackageVersionReviewStatus.rejected,
+            PackageVersionReviewStatus.approved,
+        ),
+    ),
+)
+@pytest.mark.parametrize(
+    ("viewer", "can_review"),
+    (
+        ("anonymous", False),
+        ("regular_user", False),
+        ("unrelated_moderator", False),
+        (CommunityMemberRole.janitor, False),
+        ("team_owner", False),
+        (CommunityMemberRole.moderator, True),
+        ("superuser", True),
+    ),
+)
+def test_version_review__requires_listing_moderation_permission(
+    api_client: APIClient,
+    action: str,
+    initial_status: str,
+    expected_status: str,
+    viewer: str,
+    can_review: bool,
+) -> None:
+    listing = _create_listing(initial_status)
+    if viewer == "unrelated_moderator":
+        user = UserFactory()
+        CommunityMembership.objects.create(
+            user=user,
+            community=CommunityFactory(),
+            role=CommunityMemberRole.moderator,
+        )
+    else:
+        user = _create_viewer(viewer, listing)
+    if user is not None:
+        api_client.force_authenticate(user)
+
+    response = api_client.post(_listing_url(listing) + f"v/{TARGET_VERSION}/{action}/")
+
+    target = _get_target_version(listing)
+    if can_review:
+        assert response.status_code == 200
+        assert target.review_status == expected_status
+    else:
+        assert response.status_code in (401, 403)
+        assert target.review_status == initial_status
+
+
+@pytest.mark.django_db
+def test_version_review__moderator_can_approve_rejected_only_listing(
+    api_client: APIClient,
+) -> None:
+    listing = _create_rejected_only_listing()
+    api_client.force_authenticate(
+        _create_viewer(CommunityMemberRole.moderator, listing)
+    )
+
+    response = api_client.post(_listing_url(listing) + f"v/{BASE_VERSION}/approve/")
+
+    assert response.status_code == 200
+    listing.package.refresh_from_db()
+    assert listing.package.latest.version_number == BASE_VERSION
